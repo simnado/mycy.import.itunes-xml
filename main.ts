@@ -1,9 +1,10 @@
 // import { parse } from "https://deno.land/x/xml/mod.ts"
 // import {parse} from "https://deno.land/x/ts_xml_parser/mod.ts"
 
-import { ItunesParser } from "./src/itunes/parser copy.ts";
+import { ItunesParser } from "./src/itunes/parser.ts";
 
-const inputFile = "./import/Mediathek.22.09.03.xml";
+// TODO: configure
+const inputFile = "./import/Mediathek-231030.xml";
 
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main) {
