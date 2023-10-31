@@ -5,6 +5,8 @@
 
 ## Setup
 
-run `deno --allow-read main.ts`
+run `deno --allow-read --allow-net main.ts`
 
 ## API
+
+visit the API under `http://localhost:8000/graphql`

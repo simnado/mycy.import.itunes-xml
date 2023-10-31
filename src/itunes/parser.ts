@@ -76,11 +76,12 @@ export class ItunesParser {
     this.currentItemParents.pop();
   }
 
-  async processFile(path: string) {
+  async processFile(file: File) {
     const parser = new PullParser();
 
     // create an ES6 generator
-    const uint8Array = await Deno.readFile(path);
+    const arrBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrBuffer);
     const events = parser.parse(uint8Array);
 
     let i = 0;
