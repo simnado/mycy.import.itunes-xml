@@ -1,13 +1,9 @@
 import { ItunesParser } from "./itunes/parser.ts";
 
-export async function importItunesXml(file: File) {
+export async function convertItunesXml(file: Blob) {
   // create a pull parser instance
   const parser = new ItunesParser();
   const res: any = await parser.processFile(file);
 
-  return {
-    fileName: file.name,
-    fileSize: file.size,
-    songs: Object.keys(res.root?.Tracks ?? {}).length,
-  };
+  await Deno.writeTextFile("./dist/out.json", JSON.stringify(res, null, 2));
 }

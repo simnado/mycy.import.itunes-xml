@@ -76,7 +76,11 @@ export class ItunesParser {
     this.currentItemParents.pop();
   }
 
-  async processFile(file: File) {
+  async processFile(file: Blob) {
+    if (file.type !== "text/xml") {
+      throw new Error("invalid file format");
+    }
+
     const parser = new PullParser();
 
     // create an ES6 generator
@@ -119,8 +123,10 @@ export class ItunesParser {
             this.currentField.key = node.text;
           }
           break;
+        case "end_document":
+          break;
         default:
-          console.warn(node);
+          console.warn(`unknown node type "${node.name}"`);
       }
 
       i++;

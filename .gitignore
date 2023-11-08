@@ -1,2 +1,3 @@
 data/*
 import/*
+dist/*.json
