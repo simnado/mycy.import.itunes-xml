@@ -2,7 +2,8 @@
   "tasks": {
     "dev": "deno run --allow-read --allow-net --watch main.ts",
     "serve": "deno run --allow-read --allow-net main.ts",
-    "cli": "deno run --allow-read --allow-net --allow-write main.ts --cli"
+    "cli": "deno run --allow-read --allow-net --allow-write main.ts --cli",
+    "codegen": "npx supabase gen types typescript --project-id zqfyhittgqnwzykcuvsa --schema public > types/supabase.ts"
   },
   "imports": {
     "graphql-yoga": "npm:graphql-yoga@^3.7.3"
