@@ -1,9 +1,10 @@
 import { ItunesParser } from "./itunes/parser.ts";
+import { DumpDriver } from "./itunes/drivers/dump.driver.ts";
 
-export async function convertItunesXml(file: Blob) {
-  // create a pull parser instance
-  const parser = new ItunesParser();
-  const res: any = await parser.parseAndTransform(file, {filterUpdatesSince: new Date("2022-07-01"), transform: true});
-
-  await Deno.writeTextFile("./dist/out.json", JSON.stringify(res, null, 2));
+export async function convertItunesXml(file: Blob, flags: string[] = []) {
+  if (flags.includes("--dump")) {
+    const dumpDriver = new DumpDriver();
+    const res = await dumpDriver.processFile(file);
+    await Deno.writeTextFile("./dist/dump.json", JSON.stringify(res, null, 2));
+  }
 }

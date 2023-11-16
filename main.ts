@@ -56,7 +56,7 @@ if (Deno.args.length === 0) {
 
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main && Deno.args.length) {
-  const [mode, path] = Deno.args;
+  const [mode, path, ...args] = Deno.args;
 
   if (mode !== "--cli" || !path) {
     console.error(
@@ -65,6 +65,6 @@ if (import.meta.main && Deno.args.length) {
   } else {
     const file = await Deno.readFile(path);
     const fileBlob = new Blob([file], { type: "text/xml" });
-    await convertItunesXml(fileBlob);
+    await convertItunesXml(fileBlob, args);
   }
 }

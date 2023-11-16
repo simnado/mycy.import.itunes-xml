@@ -1,97 +1,123 @@
 import { PullParser } from "https://deno.land/x/xmlp/mod.ts";
 import { ProvidedSong } from "../../types/models.ts";
 import { iTunesLib, iTunesTrack } from "./model/itunes.ts";
+import EventEmitter from "https://deno.land/x/events@v1.0.0/mod.ts";
 
-type Field = {
-  key?: string;
-  type?: string;
-  value?: any | Field[];
+type ParserEvent<T> = {
+  namespace: string;
+  value: T;
 };
 
-type ParseOptions = {
-  filterUpdatesSince?: Date;
-  transform?: boolean;
-};
+enum ParserStateType {
+  String = "string",
+  Data = "data",
+  Integer = "integer",
+  Date = "date",
+  True = "true",
+  False = "false",
+  PList = "plist",
+}
+
+class ParserState {
+  private keys: string[] = [];
+  private type?: ParserStateType;
+  private rawValue?: string;
+  private path: string[] = [];
+  private arrayIdx: number[] = [];
+
+  reset() {
+    this.keys = [];
+    this.path = [];
+    this.rawValue = undefined;
+    this.type = undefined;
+    this.arrayIdx = [];
+  }
+
+  addArray() {
+    this.arrayIdx.push(0);
+  }
+
+  popArray() {
+    this.arrayIdx.pop();
+  }
+
+  incrementArrayIdx() {
+    this.arrayIdx[this.arrayIdx.length - 1] += 1;
+  }
+
+  addPath(path: string) {
+    this.path.push(path);
+  }
+
+  popPath() {
+    this.path.pop();
+  }
+
+  setType(type: ParserStateType) {
+    this.type = type;
+  }
+
+  setValue(value: string) {
+    this.rawValue = value;
+  }
+
+  addKey(key: string) {
+    this.keys.push(key);
+  }
+
+  popKey() {
+    this.keys.pop();
+  }
+
+  get currentIdx() {
+    return this.arrayIdx.at(-1);
+  }
+
+  get currentElement() {
+    return this.path.at(-1);
+  }
+
+  get value(): any {
+    switch (this.type) {
+      case ParserStateType.String:
+      case ParserStateType.Data:
+        return this.rawValue;
+      case ParserStateType.Integer:
+        return Number(this.rawValue);
+      case ParserStateType.Date:
+        return new Date(this.rawValue ?? 0);
+      case ParserStateType.True:
+        return true;
+      case ParserStateType.False:
+        return false;
+      default:
+        console.error("unknow type " + this.type);
+        return null;
+    }
+
+    return null;
+  }
+
+  toString() {
+    return `${this.keys.join(" > ")} : ${this.value}`;
+  }
+
+  toEvent() {
+    return { key: this.keys, value: this.value };
+  }
+}
 
 export class ItunesParser {
-  private out: any = {};
-  // fields build by key type and value
-  currentField: Field = { key: "root" };
-  // items build by multiple fields
-  currentItem = this.out;
-  currentItemParents: any[] = [this.out];
+  state = new ParserState();
 
-  private reset() {
-    this.out = {};
-    this.currentField = { key: "root" };
-    this.currentItem = this.out;
-    this.currentItemParents = [this.out];
-  }
-
-  createKey() {
-    this.currentField = {};
-  }
-
-  createArray() {
-    const newArray: any[] = [];
-    const arrayKey = this.currentField.key as string;
-    const oldChild = this.currentItemParents.at(-1);
-    oldChild[arrayKey] = newArray;
-    this.currentItemParents.push(newArray);
-    this.currentItem = newArray;
-  }
-
-  createDict() {
-    const newDict = {};
-    const dictKey = this.currentField.key as string;
-    const oldChild = this.currentItemParents.at(-1);
-    if (Array.isArray(oldChild)) {
-      oldChild.push(newDict);
-    } else {
-      oldChild[dictKey] = newDict;
-    }
-    this.currentItemParents.push(newDict);
-    this.currentItem = newDict;
-  }
-
-  closeField(type: string) {
-    let value = this.currentField.value;
-    switch (type) {
-      case "string":
-      case "data":
-        break;
-      case "integer":
-        value = Number(value);
-        break;
-      case "date":
-        value = new Date(value);
-        break;
-      case "true":
-        value = true;
-        break;
-      case "false":
-        value = false;
-        break;
-      default:
-        throw new Error("unknow type " + type);
+  async *parseFile(
+    file: Blob,
+  ): AsyncGenerator<{ key: string[]; value: any }> {
+    if (file.type !== "text/xml") {
+      throw new Error("invalid file format");
     }
 
-    Object.assign(this.currentItem, {
-      [this.currentField.key as string]: value,
-    });
-    this.currentField = {};
-  }
-
-  closeArray() {
-    this.currentItemParents.pop();
-  }
-
-  closeDict() {
-    this.currentItemParents.pop();
-  }
-
-  private async parseFile(file: Blob, options: ParseOptions) {
-    this.reset();
+    this.state.reset();
     const parser = new PullParser();
 
     // create an ES6 generator
@@ -100,40 +126,71 @@ export class ItunesParser {
     const events = parser.parse(uint8Array);
 
     let i = 0;
+    const start = new Date();
 
     for (const node of events) {
+      const firstInArray = this.state.currentElement === "array";
+
       switch (node.name) {
         case "processing_instruction":
         case "doctype":
         case "start_document":
           break;
         case "start_element":
-          if (node.element?.qName === "array") {
-            this.createArray();
-          } else if (node.element?.qName === "dict") {
-            this.createDict();
-          } else if (node.element?.qName === "key") {
-            this.createKey();
-          } else if (this.currentField) {
-            this.currentField.type = node.element?.qName;
+          switch (node.element?.qName) {
+            case "plist":
+              continue;
+            case "dict":
+              if (firstInArray) {
+                this.state.addKey(String(this.state.currentIdx));
+                this.state.incrementArrayIdx();
+              }
+              this.state.addPath(node.element.qName);
+              break;
+            case "array":
+              this.state.addPath(node.element.qName);
+              this.state.addArray();
+              break;
+            case "key":
+              this.state.addPath(node.element.qName);
+              break;
+            default:
+              this.state.setType(node.element?.qName as ParserStateType);
           }
           break;
         case "end_element":
-          if (node.element?.qName === "array") {
-            this.closeArray();
-          } else if (node.element?.qName === "dict") {
-            this.closeDict();
-            this.postProcessDict(options);
-          } else if (!["dict", "key", "plist"].includes(node.element?.qName)) {
-            console.log(node.element?.uri);
-            this.closeField(node.element?.qName);
+          switch (node.element?.qName) {
+            case "array":
+              this.state.popArray();
+              this.state.popPath();
+              this.state.popKey();
+              break;
+            case "dict":
+              this.state.popPath();
+              this.state.popKey();
+              break;
+            case "key":
+              this.state.popPath();
+              break;
+            case "true":
+            case "false":
+              this.state.setValue(node.element?.qName as string);
+              yield this.state.toEvent();
+              this.state.popKey();
+              break;
+            default:
+              this.state.popKey();
           }
           break;
         case "text":
-          if (this.currentField.key && this.currentField.type) {
-            this.currentField.value = node.text;
-          } else {
-            this.currentField.key = node.text;
+          switch (this.state.currentElement) {
+            case "key":
+              this.state.addKey(node.text as string);
+              break;
+            default:
+              this.state.setValue(node.text as string);
+              yield this.state.toEvent();
+              break;
           }
           break;
         case "end_document":
@@ -145,11 +202,12 @@ export class ItunesParser {
       i++;
     }
 
-    console.log(`processed ${i} lines`);
-    return this.out?.root as iTunesLib;
+    const end = new Date();
+
+    console.log(`processed ${i} lines in ${(end - start) / 1000} seconds`);
   }
 
-  private postProcessDict(options: ParseOptions) {
+  /*private postProcessDict(options: ParseOptions) {
     if (options.filterUpdatesSince) {
       // filter by modified date
       const dictDate = this.currentItem["Date Modified"];
@@ -192,48 +250,5 @@ export class ItunesParser {
         delete this.currentItem[oldKey];
       }
     }
-  }
-
-  private async postProcessRoot(lib: iTunesLib): Promise<ProvidedSong[]> {
-    const { Tracks, Playlists } = lib;
-
-    for (const playlist of Playlists) {
-      for (const item of playlist["Playlist Items"] ?? []) {
-        //const trackId = item["Track ID"];
-        //const track = Tracks[trackId]; // maybe deleted
-        //track.tags = [...(track.tags ?? []), playlist.Name];
-      }
-    }
-
-    return Object.values(Tracks);
-  }
-
-  async parse(
-    file: Blob,
-    filterUpdatesSince = new Date(0),
-  ): Promise<iTunesLib> {
-    if (file.type !== "text/xml") {
-      throw new Error("invalid file format");
-    }
-
-    let out = await this.parseFile(file, { filterUpdatesSince });
-
-    return out as iTunesLib;
-  }
-
-  async parseAndTransform(
-    file: Blob,
-    options: ParseOptions,
-  ): Promise<ProvidedSong[]> {
-    if (file.type !== "text/xml") {
-      throw new Error("invalid file format");
-    }
-
-    let out: any = await this.parseFile(file, options);
-    if (options.transform) {
-      out = await this.postProcessRoot(out);
-    }
-
-    return out;
-  }
+  }*/
 }
