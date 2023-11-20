@@ -8,11 +8,35 @@ const yoga = createYoga({
     typeDefs: /* GraphQL */ `
       scalar File
       scalar Upload
+      scalar Date
+
+      type Library {
+        iTunesVersion: String!
+        snappedAt: Date!
+        externalId: Date!
+      }
+
+      type Song {
+        externalId: String!
+        artist: String
+        title: String!
+        composer: String
+        album: String
+        genre: String
+        duration: Int!
+        disc: Int
+        track: Int
+        year: Int
+        modifiedAt: Date!
+        addedAt: Date!
+        releaseDate: Date
+      }
 
       type ImportResult {
-        fileName: String!
-        fileSize: Int!
-        songs: Int!
+        meta: Library!
+        songs: [
+          Song!
+        ]!
       }
 
       type Query {
@@ -20,7 +44,7 @@ const yoga = createYoga({
       }
 
       type Mutation {
-        import(file: File!): ImportResult!
+        import(file: File!, modifiedSince: Date!): ImportResult!
       }
     `,
     resolvers: {
@@ -28,8 +52,8 @@ const yoga = createYoga({
         status: () => "MyCy Import is running!",
       },
       Mutation: {
-        import: async (_, { file }: { file: File }) => {
-          return importItunesXml(file);
+        import: async (_, payload: { file: File; modifiedSince: Date }) => {
+          return importItunesXml(payload);
         },
       },
     },

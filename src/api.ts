@@ -1,13 +1,11 @@
-import { ItunesParser } from "./itunes/parser.ts";
+import { SongUpdatesDriver } from "./itunes/drivers/updates.driver.ts";
 
-export async function importItunesXml(file: File) {
+export async function importItunesXml(
+  payload: { file: File; modifiedSince: Date },
+) {
   // create a pull parser instance
-  const parser = new ItunesParser();
-  const res: any = await parser.processFile(file);
+  const parser = new SongUpdatesDriver(payload.modifiedSince);
+  const res = await parser.processFile(payload.file);
 
-  return {
-    fileName: file.name,
-    fileSize: file.size,
-    songs: Object.keys(res.root?.Tracks ?? {}).length,
-  };
+  return res;
 }

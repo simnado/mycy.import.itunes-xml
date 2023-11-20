@@ -1,7 +1,4 @@
 import { PullParser } from "https://deno.land/x/xmlp/mod.ts";
-import { ProvidedSong } from "../../types/models.ts";
-import { iTunesLib, iTunesTrack } from "./model/itunes.ts";
-import EventEmitter from "https://deno.land/x/events@v1.0.0/mod.ts";
 
 type ParserEvent<T> = {
   namespace: string;
@@ -206,49 +203,4 @@ export class ItunesParser {
 
     console.log(`processed ${i} lines in ${(end - start) / 1000} seconds`);
   }
-
-  /*private postProcessDict(options: ParseOptions) {
-    if (options.filterUpdatesSince) {
-      // filter by modified date
-      const dictDate = this.currentItem["Date Modified"];
-      const isRelevant = dictDate &&
-        (new Date(dictDate) > new Date(options.filterUpdatesSince));
-      if (!isRelevant) {
-        // delete
-        delete this.currentItemParents.at(-1)[this.currentItem["Track ID"]];
-        return;
-      }
-    }
-
-    if (options.transform) {
-      const oldKeys = Object.keys(this.currentItem);
-
-      const currentItem = this.currentItem as iTunesTrack;
-      Object.assign(this.currentItem, {
-        added_at: currentItem["Date Added"],
-        album: currentItem.Album,
-        album_artist: currentItem["Album Artist"],
-        artist: currentItem.Artist,
-        composer: currentItem.Composer,
-        disc: currentItem["Disc Number"],
-        duration: currentItem["Total Time"],
-        external_id: currentItem["Persistent ID"],
-        modified_at: currentItem["Date Modified"],
-        play_count: currentItem["Play Count"],
-        rating: currentItem.Loved
-          ? 1
-          : currentItem.Rating
-          ? (currentItem.Rating / 100)
-          : undefined,
-        released_at: currentItem["Release Date"] ?? String(currentItem.Year),
-        tags: [currentItem.Genre],
-        title: currentItem.Name,
-        track: currentItem["Track Number"],
-      } as Partial<ProvidedSong>);
-
-      for (const oldKey of oldKeys) {
-        delete this.currentItem[oldKey];
-      }
-    }
-  }*/
 }

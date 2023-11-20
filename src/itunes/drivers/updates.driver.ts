@@ -6,6 +6,30 @@ type DriverState = {
   excludedSongs: Set<number>;
 };
 
+export type Library = {
+  iTunesVersion: string;
+  majorVersion: number;
+  minorVersion: number;
+  snappedAt: Date;
+  externalId: string;
+};
+
+export type Song = {
+  externalId: string;
+  title: string;
+  artist: string;
+  composer: string;
+  album: string;
+  genre: string;
+  duration: number;
+  disc: number;
+  track: number;
+  year: number;
+  modifiedAt: Date;
+  addedAt: Date;
+  releaseDate: Date;
+};
+
 export class SongUpdatesDriver extends Driver<any> {
   constructor(public readonly latestUpdate: Date) {
     super();
@@ -54,10 +78,12 @@ export class SongUpdatesDriver extends Driver<any> {
     }
   }
 
-  override async processFile(file: Blob): Promise<any> {
+  override async processFile(
+    file: Blob,
+  ): Promise<{ meta: Library; songs: Song[] }> {
     const state = {
-      songs: new Map<number, any>(),
-      meta: {},
+      songs: new Map<number, Song>(),
+      meta: {} as Library,
       excludedSongs: new Set<number>(),
     };
 

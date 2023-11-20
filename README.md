@@ -7,7 +7,7 @@
 
 run `deno task dev`
 
-## API
+## GraphQL API
 
 run `deno task serve`
 
@@ -15,6 +15,10 @@ and visit the API under `http://localhost:8003/graphql`
 
 ## CLI
 
-run `deno task cli <path to xml>`
+run `deno task cli <path to xml> [options]`
 
 and the converted file will be stored in the `dist` folder
+
+### Options
+
+- `--updates <date>` will only output songs modified since `<date>`

@@ -120,6 +120,19 @@ export class StatisticsDriver extends Driver<any> {
       }
     }
 
+    const all = state.stats.counter.all;
+
+    for (const field in state.stats.counter) {
+      state.stats.counter[field] =
+        Math.round(state.stats.counter[field] / all * 100) / 100;
+    }
+    for (const field in state.stats.canonical) {
+      for (const value in state.stats.canonical[field]) {
+        state.stats.canonical[field][value] =
+          Math.round(state.stats.canonical[field][value] / all * 100) / 100;
+      }
+    }
+
     return state;
   }
 }
