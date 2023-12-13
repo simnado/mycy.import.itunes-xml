@@ -2,3 +2,9 @@ data/*
 import/*
 dist/*.json
 .env
+.noteablekeep
+*.py[cod]
+*.vectorized_metadata
+.tmp/
+*.vectorized_content
+__pycache__
