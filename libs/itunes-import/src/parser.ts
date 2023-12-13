@@ -1,50 +1,47 @@
-import { Driver } from "./driver.ts";
-import { SongUpdatesDriver } from "./updates.driver.ts";
-import { iTunesLib } from "../model/itunes.ts";
+import { iTunesLib } from "./model/itunes.ts";
+import { ItunesStream } from "./stream.ts"
 
 type DriverState = {
   songs: Map<number, any>;
   playlists: Map<number, any>;
   meta: any;
   stats: any;
+  excludedSongs: Set<number>;
   excludePlaylists: Set<number>;
 };
 
-export class DumpDriver extends SongUpdatesDriver {
-    constructor() {
-        super(new Date(0))
+export class ITunesParser {
+
+  protected stream = new ItunesStream();
+  protected options = {
+    modifiedSince: new Date(0),
+    fieldMappings: new Map<string, string>(),
+    exclusionFilter: new Map<string, (item) => boolean>()
+  }
+
+  constructor(options: {modifiedSince?: Date, fieldMappings?: Map<string, string>, exclusionFilter?: Map<string, (item) => boolean>} = {}) {
+    Object.assign(this.options, options)
+  }
+
+  protected handleTrack(state: DriverState, key: string[], value: any) {
+    const [, id, propertyName] = key;
+    const trackId = Number(id);
+    if (state.songs.has(trackId)) {
+      if (
+        propertyName === "modifiedAt" && value < this.options.modifiedSince
+      ) {
+        //exclude
+        state.excludedSongs.add(trackId);
+        state.songs.delete(trackId);
+      } else {
+        // update
+        Object.assign(state.songs.get(trackId), { [propertyName]: value });
+      }
+    } else {
+      // create
+      state.songs.set(trackId, { [propertyName]: value });
     }
-
-  exclusionFilter = new Map([
-    ["Distinguished Kind", () => true],
-    ["Folder", () => true],
-    ["Master", () => true],
-    ["Smart Criteria", () => true],
-  ]);
-
-  fieldMappings = new Map([
-    ["Album", "album"],
-    ["Application Version", "iTunesVersion"],
-    ["Artist", "artist"],
-    ["Composer", "composer"],
-    ["Date", "snappedAt"],
-    ["Date Added", "addedAt"],
-    ["Date Modified", "modifiedAt"],
-    ["Disc Number", "disc"],
-    ["Genre", "genre"],
-    ["Library Persistent ID", "externalId"],
-    ["Major Version", "majorVersion"],
-    ["Minor Version", "minorVersion"],
-    ["Name", "title"],
-    ["Persistent ID", "externalId"],
-    ["Playlist Persistent ID", "externalId"],
-    ["Release Date", "releaseDate"],
-    ["Total Time", "duration"],
-    ["Track ID", "externalId"],
-    ["Track Number", "track"],
-    ["Work", "work"],
-    ["Year", "year"],
-  ]);
+  }
 
   protected handlePlaylists(
     state: DriverState,
@@ -55,8 +52,8 @@ export class DumpDriver extends SongUpdatesDriver {
     const playlistIdx = Number(idx);
     if (state.playlists.has(playlistIdx)) {
       if (
-        this.exclusionFilter.has(propertyName) &&
-        this.exclusionFilter.get(propertyName)(value)
+        this.options.exclusionFilter.has(propertyName) &&
+        this.options.exclusionFilter.get(propertyName)(value)
       ) {
         //exclude
         state.excludePlaylists.add(playlistIdx);
@@ -103,14 +100,14 @@ export class DumpDriver extends SongUpdatesDriver {
       excludePlaylists: new Set<number>(),
     };
 
-    for await (const event of this.parser.parseFile(file)) {
+    for await (const event of this.stream.parseFile(file)) {
       const { key, value } = event;
 
       // skip irrelevant events
       const leafKey = key.at(-1) as string;
 
-      const leafKeyIsIrrelevant = !this.fieldMappings.has(leafKey) &&
-        !this.exclusionFilter.has(leafKey);
+      const leafKeyIsIrrelevant = !this.options.fieldMappings.has(leafKey) &&
+        !this.options.exclusionFilter.has(leafKey);
       const playlistIsExcluded = key.at(0) === "Playlists" &&
         state.excludePlaylists.has(Number(key[1]));
       if (leafKeyIsIrrelevant || playlistIsExcluded) {
@@ -118,9 +115,9 @@ export class DumpDriver extends SongUpdatesDriver {
       }
 
       // transform property names
-      if (this.fieldMappings.has(leafKey)) {
+      if (this.options.fieldMappings.has(leafKey)) {
         key.pop();
-        key.push(this.fieldMappings.get(leafKey) as string);
+        key.push(this.options.fieldMappings.get(leafKey) as string);
       }
 
       // put stuff together

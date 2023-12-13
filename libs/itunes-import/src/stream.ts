@@ -104,14 +104,14 @@ class ParserState {
   }
 }
 
-export class ItunesParser {
+export class ItunesStream {
   state = new ParserState();
 
   async *parseFile(
     file: Blob,
   ): AsyncGenerator<{ key: string[]; value: any }> {
     if (file.type !== "text/xml") {
-      throw new Error("invalid file format");
+      throw new Error(`invalid file format ${file.type}`);
     }
 
     this.state.reset();
