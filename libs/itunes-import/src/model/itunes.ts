@@ -62,6 +62,6 @@ export type iTunesPlaylist = {
 };
 
 export type iTunesPlaylistTrack = {
-  _idx: number; // playlist idx -> not cool
-  "Track ID": number;
+  "Persistent ID": string;
+  "Playlist Persistent ID": string;
 };

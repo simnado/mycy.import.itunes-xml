@@ -9,14 +9,18 @@ if (import.meta.main) {
   const parser = new ITunesParser();
 
   parser.on("meta", (meta) => console.log(meta));
-  //parser.on("playlist", (playlist) => console.log(playlist));
+  parser.on("playlist", (playlist) => {
+    if (!playlist["Playlist Persistent ID"]) {
+      console.log(playlist);
+    }
+  });
   parser.on("track", (track) => {
-    if (track["Volume Adjustment"]) {
+    if (false) {
       console.log(track);
     }
   });
   parser.on("playlistTrack", (track) => {
-    if (track["Track ID"] === 31537) {
+    if (track["Playlist Persistent ID"] && false) {
       console.log(track);
     }
   });

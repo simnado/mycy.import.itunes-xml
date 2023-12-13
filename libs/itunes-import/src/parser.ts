@@ -10,7 +10,9 @@ type ParserState = {
   meta: Partial<iTunesLibrary> | null;
   track: Partial<iTunesTrack> | null;
   playlist: Partial<iTunesPlaylist> | null;
-  // store persistent ids here as well
+  trackIds: Map<number, string>;
+  playlistIds: Map<number, string>;
+  playlistTracks: number;
 };
 
 type ITunesEventListener = {
@@ -34,22 +36,19 @@ export class ITunesParser {
   protected handleTrack(state: ParserState, key: string[], value: any) {
     const [, id, propertyName] = key;
     const trackId = Number(id);
-    let fired = false;
     if (state.track?.["Track ID"] === trackId) {
       // update
       Object.assign(state.track, { [propertyName]: value });
     } else {
       // create and fire event
       if (state.track?.["Track ID"]) {
-        this.trackListener?.(state.track as iTunesTrack);
-        fired = true;
+        this.fireTrack(state);
       }
       state.track = {
         ["Track ID"]: trackId,
         [propertyName]: value,
       };
     }
-    return fired;
   }
 
   protected handlePlaylists(
@@ -59,7 +58,6 @@ export class ITunesParser {
   ) {
     const [, idx, propertyName] = key;
     const playlistIdx = Number(idx);
-    let fired = false;
     if (state.playlist?._idx === playlistIdx) {
       // update
       Object.assign(state.playlist, {
@@ -68,15 +66,13 @@ export class ITunesParser {
     } else {
       // create and fire event
       if (state.playlist?._idx) {
-        this.playlistListener?.(state.playlist as iTunesPlaylist);
-        fired = true;
+        this.firePlaylist(state);
       }
       state.playlist = {
         _idx: playlistIdx,
         [propertyName]: value,
       };
     }
-    return fired;
   }
 
   protected handlePlaylistAssignments(
@@ -87,10 +83,52 @@ export class ITunesParser {
     const playlistIdx = Number(key[1]);
     const trackId = value;
 
-    this.playlistTrackListener?.({
-      "Track ID": trackId,
-      _idx: playlistIdx,
-    });
+    const persistentTrackId = state.trackIds.get(trackId);
+    const persistentPlaylistId = state.playlistIds.get(playlistIdx);
+
+    if (persistentTrackId && persistentPlaylistId) {
+      this.playlistTrackListener?.({
+        "Persistent ID": persistentTrackId,
+        "Playlist Persistent ID": persistentPlaylistId,
+        //"Track ID": trackId,
+        //_idx: playlistIdx,
+      });
+      state.playlistTracks += 1;
+    } else if (playlistIdx === 0) {
+      // skip "Mediathek" playlist
+      return;
+    } else {
+      console.warn(
+        `no persistant ids for playlistTrack Track(${trackId}=>${persistentTrackId}) x Playlist(${playlistIdx}=>${persistentPlaylistId})`,
+      );
+    }
+  }
+
+  private fireMeta(state: ParserState) {
+    this.metaListener?.(state.meta as iTunesLibrary);
+    state.meta = null;
+  }
+
+  private fireTrack(state: ParserState) {
+    if (state.track?.["Track ID"]) {
+      this.trackListener?.(state.track as iTunesTrack);
+      state.trackIds.set(
+        state.track["Track ID"],
+        state.track["Persistent ID"] as string,
+      );
+      state.track = null;
+    }
+  }
+
+  private firePlaylist(state: ParserState) {
+    if (state.playlist?._idx) {
+      this.playlistListener?.(state.playlist as iTunesPlaylist);
+      state.playlistIds.set(
+        state.playlist._idx,
+        state.playlist["Playlist Persistent ID"] as string,
+      );
+      state.playlist = null;
+    }
   }
 
   on: ITunesEventListener = (event, callback) => {
@@ -116,15 +154,13 @@ export class ITunesParser {
   };
 
   async processFile(file: Blob) {
-    const stats = {
-      songs: 0,
-      playlists: 0,
-      playlistTracks: 0,
-    };
     const state: ParserState = {
       track: {},
       playlist: {},
       meta: {},
+      trackIds: new Map(),
+      playlistIds: new Map(),
+      playlistTracks: 0,
     };
 
     for await (const event of this.stream.parseFile(file)) {
@@ -142,34 +178,25 @@ export class ITunesParser {
         case "Tracks":
           if (state.meta) {
             // fire meta event
-            this.metaListener?.(state.meta as iTunesLibrary);
-            state.meta = null;
+            this.fireMeta(state);
           }
-          if (this.handleTrack(state, key, value)) {
-            stats.songs += 1;
-          }
+          this.handleTrack(state, key, value);
           break;
         case "Playlists":
           if (state.track) {
             // fire last track event
-            this.trackListener?.(state.track as iTunesTrack);
-            state.track = null;
+            this.fireTrack(state);
           }
           if (key.length === 3) {
             // handle playlists
-            if (this.handlePlaylists(state, key, value)) {
-              stats.playlists += 1;
-            }
+            this.handlePlaylists(state, key, value);
           } else if (key.length === 5) {
             if (state.playlist) {
               // fire last playlist event
-              this.playlistListener?.(state.playlist as iTunesPlaylist);
-              state.playlist = null;
-              stats.playlists += 1;
+              this.firePlaylist(state);
             }
             // handle playlist tracks
             this.handlePlaylistAssignments(state, key, value);
-            stats.playlistTracks += 1;
           }
           break;
         default:
@@ -179,10 +206,13 @@ export class ITunesParser {
 
     if (state.playlist) {
       // fire last playlist event
-      this.playlistListener?.(state.playlist as iTunesPlaylist);
-      state.playlist = null;
+      this.firePlaylist(state);
     }
 
-    return stats;
+    return {
+      tracks: state.trackIds.size,
+      playlists: state.playlistIds.size,
+      playlistTracks: state.playlistTracks,
+    };
   }
 }
