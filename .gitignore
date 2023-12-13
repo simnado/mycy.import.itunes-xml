@@ -6,5 +6,7 @@ dist/*.json
 *.py[cod]
 *.vectorized_metadata
 .tmp/
+.tmp/*
+*.xml
 *.vectorized_content
 __pycache__
