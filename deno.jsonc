@@ -6,6 +6,7 @@
     "codegen": "npx supabase gen types typescript --project-id zqfyhittgqnwzykcuvsa --schema public > types/supabase.ts"
   },
   "imports": {
+    "@narendev/itunes-import": "./libs/itunes-import/index.ts",
     "graphql-yoga": "npm:graphql-yoga@^3.7.3"
   }
 }

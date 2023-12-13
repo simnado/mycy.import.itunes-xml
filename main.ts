@@ -2,6 +2,9 @@ import { importItunesXml } from "./src/api.ts";
 import { createSchema, createYoga } from "graphql-yoga";
 import { serve } from "https://deno.land/std@0.157.0/http/server.ts";
 import { convertItunesXml } from "./src/cli.ts";
+import {a} from '@narendev/itunes-import'
+
+console.log(a)
 
 const yoga = createYoga({
   schema: createSchema({
