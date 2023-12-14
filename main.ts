@@ -1,4 +1,5 @@
 import { ITunesParser } from "@narendev/itunes-import";
+import { fromEvent } from "npm:rxjs";
 
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main) {
@@ -8,22 +9,8 @@ if (import.meta.main) {
   const fileBlob = new Blob([file], { type: "text/xml" });
   const parser = new ITunesParser();
 
-  parser.on("meta", (meta) => console.log(meta));
-  parser.on("playlist", (playlist) => {
-    if (!playlist["Playlist Persistent ID"]) {
-      console.log(playlist);
-    }
-  });
-  parser.on("track", (track) => {
-    if (false) {
-      console.log(track);
-    }
-  });
-  parser.on("playlistTrack", (track) => {
-    if (track["Playlist Persistent ID"] && false) {
-      console.log(track);
-    }
-  });
+  const meta$ = fromEvent(parser, "meta");
+  meta$.subscribe((meta) => console.log(meta));
 
   const res = await parser.processFile(fileBlob);
   console.log(res);

@@ -8,7 +8,8 @@
       "npm:graphql-zeus": "npm:graphql-zeus@5.3.2",
       "npm:itunes-db": "npm:itunes-db@0.4.0",
       "npm:itunes-library-stream": "npm:itunes-library-stream@0.0.0",
-      "npm:itunes-parser": "npm:itunes-parser@0.0.1"
+      "npm:itunes-parser": "npm:itunes-parser@0.0.1",
+      "npm:rxjs": "npm:rxjs@7.8.1"
     },
     "npm": {
       "@envelop/core@3.0.6": {
@@ -410,6 +411,12 @@
       "require-directory@2.1.1": {
         "integrity": "sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==",
         "dependencies": {}
+      },
+      "rxjs@7.8.1": {
+        "integrity": "sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==",
+        "dependencies": {
+          "tslib": "tslib@2.6.2"
+        }
       },
       "sax@0.6.1": {
         "integrity": "sha512-8ip+qnRh7m8OEyvoM1JoSBzlrepp3ajVR8nqgrfTig+TewfyvTijl0am8/anFqgbcdz62ofEUKE1hHNDCdbeSQ==",
