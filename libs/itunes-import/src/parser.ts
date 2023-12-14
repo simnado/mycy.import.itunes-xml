@@ -152,6 +152,26 @@ export class ITunesParser {
     }
     return this;
   };
+  
+  off(event: 'meta' | 'track' | 'playlist' | 'playlistTrack') {
+  	switch (event) {
+      case "meta":
+        this.metaListener = null;
+        break;
+      case "track":
+        this.trackListener = null;
+        break;
+      case "playlist":
+        this.playlistListener = null;
+        break;
+      case "playlistTrack":
+        this.playlistTrackListener = null;
+        break;
+      default:
+        throw new Error(`unknown event called ${event}`);
+    }
+    return this;
+  }
 
   async processFile(file: Blob) {
     const state: ParserState = {
