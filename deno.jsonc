@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --allow-read --allow-net --watch main.ts",
+    "dev": "deno run --allow-read --allow-env --allow-net --allow-sys main.ts",
     "serve": "deno run --allow-read --allow-net main.ts",
     "cli": "deno run --allow-read --allow-net --allow-write main.ts --cli",
     "codegen": "npx supabase gen types typescript --project-id zqfyhittgqnwzykcuvsa --schema public > types/supabase.ts"
@@ -8,6 +8,7 @@
   "imports": {
     "@narendev/mycy-app": "./app/index.ts",
     "@narendev/itunes-import": "./libs/itunes-import/index.ts",
-    "itunes-search-client": "npm:itunes-search-client"
+    "itunes-search-client": "npm:itunes-search-client",
+    "mongoose": "npm:mongoose"
   }
 }

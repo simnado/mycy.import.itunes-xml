@@ -28,12 +28,12 @@ type ITunesEventListener = {
 export class ITunesParser {
   protected stream = new ItunesStream();
 
-  private metaListener?: (data: iTunesLibrary) => void;
-  private trackListener?: (data: iTunesTrack) => void;
+  private metaListener?: (data: iTunesLibrary) => void | Promise<void>;
+  private trackListener?: (data: iTunesTrack) => void | Promise<void>;
   private playlistListener?: (data: iTunesPlaylist) => void;
   private playlistTrackListener?: (data: iTunesPlaylistTrack) => void;
 
-  protected handleTrack(state: ParserState, key: string[], value: any) {
+  protected async handleTrack(state: ParserState, key: string[], value: any) {
     const [, id, propertyName] = key;
     const trackId = Number(id);
     if (state.track?.["Track ID"] === trackId) {
@@ -42,7 +42,7 @@ export class ITunesParser {
     } else {
       // create and fire event
       if (state.track?.["Track ID"]) {
-        this.fireTrack(state);
+        await this.fireTrack(state);
       }
       state.track = {
         ["Track ID"]: trackId,
@@ -104,14 +104,18 @@ export class ITunesParser {
     }
   }
 
-  private fireMeta(state: ParserState) {
-    this.metaListener?.(state.meta as iTunesLibrary);
+  private async fireMeta(state: ParserState) {
+    if (this.metaListener) {
+      await this.metaListener(state.meta as iTunesLibrary);
+    }
     state.meta = null;
   }
 
-  private fireTrack(state: ParserState) {
+  private async fireTrack(state: ParserState) {
     if (state.track?.["Track ID"]) {
-      this.trackListener?.(state.track as iTunesTrack);
+      if (this.trackListener) {
+        await this.trackListener(state.track as iTunesTrack);
+      }
       state.trackIds.set(
         state.track["Track ID"],
         state.track["Persistent ID"] as string,
@@ -152,20 +156,20 @@ export class ITunesParser {
     }
     return this;
   };
-  
-  off(event: 'meta' | 'track' | 'playlist' | 'playlistTrack') {
-  	switch (event) {
+
+  off(event: "meta" | "track" | "playlist" | "playlistTrack") {
+    switch (event) {
       case "meta":
-        this.metaListener = null;
+        this.metaListener = undefined;
         break;
       case "track":
-        this.trackListener = null;
+        this.trackListener = undefined;
         break;
       case "playlist":
-        this.playlistListener = null;
+        this.playlistListener = undefined;
         break;
       case "playlistTrack":
-        this.playlistTrackListener = null;
+        this.playlistTrackListener = undefined;
         break;
       default:
         throw new Error(`unknown event called ${event}`);
@@ -198,14 +202,14 @@ export class ITunesParser {
         case "Tracks":
           if (state.meta) {
             // fire meta event
-            this.fireMeta(state);
+            await this.fireMeta(state);
           }
-          this.handleTrack(state, key, value);
+          await this.handleTrack(state, key, value);
           break;
         case "Playlists":
           if (state.track) {
             // fire last track event
-            this.fireTrack(state);
+            await this.fireTrack(state);
           }
           if (key.length === 3) {
             // handle playlists

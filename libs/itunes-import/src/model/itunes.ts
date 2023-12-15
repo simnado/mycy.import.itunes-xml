@@ -18,8 +18,8 @@ export type iTunesTrack = {
   Clean?: boolean;
   Comments?: string;
   Composer: string;
-  "Date Added": string;
-  "Date Modified": string;
+  "Date Added": Date;
+  "Date Modified": Date;
   "Disc Number": number;
   Disliked?: boolean;
   Explicit?: boolean;
@@ -33,9 +33,10 @@ export type iTunesTrack = {
   "Persistent ID": string;
   "Play Count"?: number;
   Rating?: number;
-  "Release Date": string;
+  "Release Date"?: Date;
   "Sample Rate"?: number;
   "Skip Count"?: number;
+  "Size": number;
   "Total Time": number;
   "Track ID": number;
   "Track Number": number;
