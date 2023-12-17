@@ -1,4 +1,5 @@
 import { PullParser } from "https://deno.land/x/xmlp/mod.ts";
+import he from "npm:he";
 
 type ParserEvent<T> = {
   namespace: string;
@@ -77,6 +78,7 @@ class ParserState {
   get value(): any {
     switch (this.type) {
       case ParserStateType.String:
+        return he.decode(this.rawValue);
       case ParserStateType.Data:
         return this.rawValue;
       case ParserStateType.Integer:

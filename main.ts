@@ -1,9 +1,11 @@
 import { ITunesParser } from "@narendev/itunes-import";
 import { fromEvent } from "npm:rxjs";
-import mongoose from "npm:mongoose";
 import { Database } from "@narendev/mycy-app";
 import { load } from "https://deno.land/std@0.209.0/dotenv/mod.ts";
-import he from "npm:he";
+import {isc} from 'npm:itunes-search-client'
+
+const res = await isc('foo').media('music').entity('song').
+const json = await res.json()
 
 await load({ export: true });
 
@@ -16,6 +18,7 @@ if (import.meta.main) {
   const parser = new ITunesParser();
   const db = await Database.connect(Deno.env.get("MONGO_URL") as string);
 
+  let trackProcessed = 0;
   parser.on("track", async (track) => {
     await db.upsertTrack({
       addedAt: track["Date Added"],
@@ -56,6 +59,10 @@ if (import.meta.main) {
       volumeAdjustment: track["Volume Adjustment"],
       work: track.Work,
     });
+    trackProcessed += 1;
+    if (trackProcessed % 100 === 0) {
+      console.log(trackProcessed);
+    }
   });
 
   const meta$ = fromEvent(parser, "meta");

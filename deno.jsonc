@@ -8,6 +8,7 @@
   "imports": {
     "@narendev/mycy-app": "./app/index.ts",
     "@narendev/itunes-import": "./libs/itunes-import/index.ts",
+    "he": "npm:he",
     "itunes-search-client": "npm:itunes-search-client",
     "mongoose": "npm:mongoose"
   }
